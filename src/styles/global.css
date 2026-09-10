@@ -11,7 +11,6 @@
 	--gray: 150, 160, 150;
 	--gray-light: 32, 36, 32;
 	--gray-dark: 235, 240, 235;
-	--gray-gradient: rgba(76, 232, 56, 0.08), #000;
 	--box-shadow:
 		0 2px 6px rgba(76, 232, 56, 0.15), 0 8px 24px rgba(76, 232, 56, 0.2),
 		0 16px 32px rgba(0, 0, 0, 0.5);
@@ -21,13 +20,30 @@ body {
 	margin: 0;
 	padding: 0;
 	text-align: left;
-	background: #000 linear-gradient(var(--gray-gradient)) no-repeat;
-	background-size: 100% 600px;
+	position: relative;
+	background: #000;
 	word-wrap: break-word;
 	overflow-wrap: break-word;
 	color: rgb(var(--gray-dark));
 	font-size: 20px;
 	line-height: 1.7;
+}
+body::before {
+	content: '';
+	position: absolute;
+	top: -340px;
+	left: 50%;
+	transform: translateX(-50%);
+	width: min(1400px, 190vw);
+	aspect-ratio: 1;
+	background: url('/logo-bg.png') no-repeat center top;
+	background-size: contain;
+	filter: blur(40px);
+	opacity: 0.6;
+	z-index: -1;
+	pointer-events: none;
+	-webkit-mask-image: linear-gradient(to bottom, #000 30%, transparent 85%);
+	mask-image: linear-gradient(to bottom, #000 30%, transparent 85%);
 }
 main {
 	width: 720px;
