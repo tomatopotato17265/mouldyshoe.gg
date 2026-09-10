@@ -2,6 +2,7 @@
 import { SITE_TITLE } from '../consts';
 ---
 
+<div class="header-sentinel" aria-hidden="true"></div>
 <header>
 	<nav>
 		<h2><a href="/">{SITE_TITLE}</a></h2>
@@ -63,11 +64,43 @@ import { SITE_TITLE } from '../consts';
 		</div>
 	</nav>
 </header>
+
+<script>
+	const header = document.querySelector('header');
+	const sentinel = document.querySelector('.header-sentinel');
+	if (header && sentinel) {
+		new IntersectionObserver(
+			([entry]) => header.classList.toggle('scrolled', !entry.isIntersecting),
+			{ threshold: 0 },
+		).observe(sentinel);
+	}
+</script>
+
 <style>
+	.header-sentinel {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 1px;
+		height: 200px;
+		pointer-events: none;
+	}
 	header {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		z-index: 10;
 		margin: 0;
 		padding: 0 1em;
-		background: #0a0a0a;
+		background-color: transparent;
+		box-shadow: none;
+		transition:
+			background-color 0.25s ease,
+			box-shadow 0.25s ease;
+	}
+	header.scrolled {
+		background-color: #0a0a0a;
 		box-shadow: 0 2px 8px rgba(76, 232, 56, 0.15);
 	}
 	h2 {
@@ -78,6 +111,13 @@ import { SITE_TITLE } from '../consts';
 	h2 a,
 	h2 a.active {
 		text-decoration: none;
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 0.25s ease;
+	}
+	header.scrolled h2 a {
+		opacity: 1;
+		pointer-events: auto;
 	}
 	nav {
 		display: flex;
