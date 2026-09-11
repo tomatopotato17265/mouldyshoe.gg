@@ -7,35 +7,81 @@ interface Env {
 	YOUTUBE_CHANNEL_HANDLE?: string;
 }
 
+interface LatestVideo {
+	id: string;
+	title: string;
+	thumbnail: string;
+}
+
 interface Stats {
 	updatedAt: number;
 	subscribers: number | null;
 	videos: number | null;
+	latestVideo: LatestVideo | null;
 }
 
 const KV_KEY = 'stats:v1';
 const TTL_MS = 10 * 60 * 1000;
 
-async function fetchYouTube(env: Env): Promise<Pick<Stats, 'subscribers' | 'videos'>> {
+type ChannelInfo = Pick<Stats, 'subscribers' | 'videos'> & { uploadsPlaylistId: string | null };
+
+async function fetchChannel(env: Env): Promise<ChannelInfo> {
 	const handle = (env.YOUTUBE_CHANNEL_HANDLE ?? 'mouldy_shoe').replace(/^@/, '');
 	const url =
 		'https://www.googleapis.com/youtube/v3/channels' +
-		`?part=statistics&forHandle=${encodeURIComponent(handle)}` +
+		'?part=statistics,contentDetails' +
+		`&forHandle=${encodeURIComponent(handle)}` +
 		`&key=${env.YOUTUBE_API_KEY}`;
 
 	try {
 		const res = await fetch(url, { headers: { accept: 'application/json' } });
-		if (!res.ok) return { subscribers: null, videos: null };
+		if (!res.ok) return { subscribers: null, videos: null, uploadsPlaylistId: null };
 		const data = (await res.json()) as {
-			items?: { statistics?: { subscriberCount?: string; videoCount?: string } }[];
+			items?: {
+				statistics?: { subscriberCount?: string; videoCount?: string };
+				contentDetails?: { relatedPlaylists?: { uploads?: string } };
+			}[];
 		};
-		const stats = data.items?.[0]?.statistics;
+		const item = data.items?.[0];
 		return {
-			subscribers: toCount(stats?.subscriberCount),
-			videos: toCount(stats?.videoCount),
+			subscribers: toCount(item?.statistics?.subscriberCount),
+			videos: toCount(item?.statistics?.videoCount),
+			uploadsPlaylistId: item?.contentDetails?.relatedPlaylists?.uploads ?? null,
 		};
 	} catch {
-		return { subscribers: null, videos: null };
+		return { subscribers: null, videos: null, uploadsPlaylistId: null };
+	}
+}
+
+async function fetchLatestVideo(uploadsPlaylistId: string, env: Env): Promise<LatestVideo | null> {
+	const url =
+		'https://www.googleapis.com/youtube/v3/playlistItems' +
+		'?part=snippet&maxResults=1' +
+		`&playlistId=${encodeURIComponent(uploadsPlaylistId)}` +
+		`&key=${env.YOUTUBE_API_KEY}`;
+
+	try {
+		const res = await fetch(url, { headers: { accept: 'application/json' } });
+		if (!res.ok) return null;
+		const data = (await res.json()) as {
+			items?: {
+				snippet?: {
+					title?: string;
+					resourceId?: { videoId?: string };
+					thumbnails?: Record<string, { url?: string }>;
+				};
+			}[];
+		};
+		const snippet = data.items?.[0]?.snippet;
+		const id = snippet?.resourceId?.videoId;
+		const thumbnail =
+			snippet?.thumbnails?.high?.url ??
+			snippet?.thumbnails?.medium?.url ??
+			snippet?.thumbnails?.default?.url;
+		if (!id || !thumbnail) return null;
+		return { id, title: snippet?.title ?? '', thumbnail };
+	} catch {
+		return null;
 	}
 }
 
@@ -47,11 +93,16 @@ function toCount(raw: string | undefined): number | null {
 
 async function refresh(env: Env): Promise<Stats> {
 	const previous = await env.STATS_KV.get<Stats>(KV_KEY, 'json');
-	const fresh = await fetchYouTube(env);
+	const channel = await fetchChannel(env);
+	const latestVideo = channel.uploadsPlaylistId
+		? await fetchLatestVideo(channel.uploadsPlaylistId, env)
+		: null;
+
 	const stats: Stats = {
 		updatedAt: Date.now(),
-		subscribers: fresh.subscribers ?? previous?.subscribers ?? null,
-		videos: fresh.videos ?? previous?.videos ?? null,
+		subscribers: channel.subscribers ?? previous?.subscribers ?? null,
+		videos: channel.videos ?? previous?.videos ?? null,
+		latestVideo: latestVideo ?? previous?.latestVideo ?? null,
 	};
 	await env.STATS_KV.put(KV_KEY, JSON.stringify(stats));
 	return stats;
