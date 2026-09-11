@@ -1,0 +1,13 @@
+{
+	"compilerOptions": {
+		"types": ["@cloudflare/workers-types"],
+		"lib": ["esnext"],
+		"module": "esnext",
+		"moduleResolution": "bundler",
+		"target": "esnext",
+		"strict": true,
+		"skipLibCheck": true,
+		"noEmit": true
+	},
+	"include": ["index.ts"]
+}

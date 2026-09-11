@@ -25,6 +25,20 @@ import logo from '../assets/favicon.png';
 				League. I'm based in Australia. I'm currently GC2 :D
 			</p>
 			<p>I'm also a creator for STARCORE.</p>
+			<ul class="stats">
+				<li class="stat">
+					<a href="https://youtube.com/@mouldy_shoe" target="_blank" rel="noopener">
+						<span class="stat-value" data-stat="subscribers">—</span>
+						<span class="stat-label">Subscribers</span>
+					</a>
+				</li>
+				<li class="stat">
+					<a href="https://youtube.com/@mouldy_shoe/videos" target="_blank" rel="noopener">
+						<span class="stat-value" data-stat="videos">—</span>
+						<span class="stat-label">Videos</span>
+					</a>
+				</li>
+			</ul>
 			<Footer />
 		</main>
 	</body>
@@ -48,4 +62,75 @@ import logo from '../assets/favicon.png';
 	.hero h1 {
 		margin: 0;
 	}
+	.stats {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 2.5rem;
+		margin: 2.5rem 0 0;
+		padding: 0;
+		list-style: none;
+	}
+	.stat a {
+		display: flex;
+		flex-direction: column;
+		text-decoration: none;
+		color: inherit;
+	}
+	.stat-value {
+		font-size: 1.8rem;
+		font-weight: 700;
+		line-height: 1.2;
+		color: rgb(var(--black));
+		font-variant-numeric: tabular-nums;
+	}
+	.stat-label {
+		font-size: 0.9rem;
+		color: rgb(var(--gray));
+	}
+	.stat a:hover .stat-value {
+		color: var(--accent);
+	}
 </style>
+
+<script>
+	const fmt = new Intl.NumberFormat('en', {
+		notation: 'compact',
+		maximumFractionDigits: 1,
+	});
+	const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+	function countUp(el: Element, target: number) {
+		const final = fmt.format(target);
+		if (reduceMotion) {
+			el.textContent = final;
+			return;
+		}
+		const duration = 1200;
+		const start = performance.now();
+		const fallback = setTimeout(() => {
+			el.textContent = final;
+		}, duration + 250);
+		function frame(now: number) {
+			const t = Math.min(1, (now - start) / duration);
+			const eased = 1 - Math.pow(1 - t, 3);
+			el.textContent = fmt.format(Math.round(target * eased));
+			if (t < 1) {
+				requestAnimationFrame(frame);
+			} else {
+				clearTimeout(fallback);
+				el.textContent = final;
+			}
+		}
+		requestAnimationFrame(frame);
+	}
+
+	fetch('/api/stats')
+		.then((r) => r.json())
+		.then((data: Record<string, unknown>) => {
+			document.querySelectorAll<HTMLElement>('[data-stat]').forEach((el) => {
+				const value = data[el.dataset.stat ?? ''];
+				if (typeof value === 'number') countUp(el, value);
+			});
+		})
+		.catch(() => {});
+</script>
