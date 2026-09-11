@@ -65,27 +65,36 @@ import logo from '../assets/favicon.png';
 	.stats {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 2.5rem;
+		justify-content: center;
+		gap: 6rem;
 		margin: 2.5rem 0 0;
 		padding: 0;
 		list-style: none;
+		background: transparent;
+		text-align: center;
+	}
+	.stat {
+		background: transparent;
 	}
 	.stat a {
 		display: flex;
 		flex-direction: column;
+		align-items: center;
 		text-decoration: none;
-		color: inherit;
+		color: rgb(var(--black));
+		background: transparent;
+		-webkit-tap-highlight-color: transparent;
 	}
 	.stat-value {
-		font-size: 1.8rem;
+		font-size: 3rem;
 		font-weight: 700;
 		line-height: 1.2;
 		color: rgb(var(--black));
 		font-variant-numeric: tabular-nums;
 	}
 	.stat-label {
-		font-size: 0.9rem;
-		color: rgb(var(--gray));
+		font-size: 1.1rem;
+		color: rgb(var(--black));
 	}
 	.stat a:hover .stat-value {
 		color: var(--accent);
@@ -110,15 +119,20 @@ import logo from '../assets/favicon.png';
 		const fallback = setTimeout(() => {
 			el.textContent = final;
 		}, duration + 250);
+		let last = el.textContent;
 		function frame(now: number) {
 			const t = Math.min(1, (now - start) / duration);
 			const eased = 1 - Math.pow(1 - t, 3);
-			el.textContent = fmt.format(Math.round(target * eased));
+			const next = fmt.format(Math.round(target * eased));
+			if (next !== last) {
+				last = next;
+				el.textContent = next;
+			}
 			if (t < 1) {
 				requestAnimationFrame(frame);
 			} else {
 				clearTimeout(fallback);
-				el.textContent = final;
+				if (last !== final) el.textContent = final;
 			}
 		}
 		requestAnimationFrame(frame);

@@ -28,22 +28,20 @@ body {
 	font-size: 20px;
 	line-height: 1.7;
 }
+
 body::before {
 	content: '';
 	position: absolute;
-	top: -340px;
+	top: 0;
 	left: 50%;
 	transform: translateX(-50%);
-	width: min(1400px, 190vw);
-	aspect-ratio: 1;
-	background: url('/logo-bg.png') no-repeat center top;
-	background-size: contain;
-	filter: blur(40px);
-	opacity: 0.6;
+	width: min(1700px, 231vw);
+	aspect-ratio: 1700 / 900;
+	max-height: 100%;
+	background: url('/glow-bg.png') no-repeat top center;
+	background-size: 100% auto;
 	z-index: -1;
 	pointer-events: none;
-	-webkit-mask-image: linear-gradient(to bottom, #000 30%, transparent 85%);
-	mask-image: linear-gradient(to bottom, #000 30%, transparent 85%);
 }
 main {
 	width: 720px;
