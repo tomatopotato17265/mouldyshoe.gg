@@ -3,8 +3,13 @@ import { Image } from 'astro:assets';
 import BaseHead from '../components/BaseHead.astro';
 import Footer from '../components/Footer.astro';
 import Header from '../components/Header.astro';
-import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+import { CURRENT_RANK, RANK_TIERS, SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 import logo from '../assets/favicon.png';
+
+const rankIndex = RANK_TIERS.indexOf(CURRENT_RANK);
+if (rankIndex === -1) {
+	throw new Error(`CURRENT_RANK ("${CURRENT_RANK}") is not in RANK_TIERS — fix src/consts.ts`);
+}
 ---
 
 <!doctype html>
@@ -27,16 +32,27 @@ import logo from '../assets/favicon.png';
 			<p>I'm also a creator for STARCORE.</p>
 			<ul class="stats">
 				<li class="stat">
-					<a href="https://youtube.com/@mouldy_shoe" target="_blank" rel="noopener">
+					<a class="stat-inner" href="https://youtube.com/@mouldy_shoe" target="_blank" rel="noopener">
 						<span class="stat-value" data-stat="subscribers">—</span>
 						<span class="stat-label">Subscribers</span>
 					</a>
 				</li>
 				<li class="stat">
-					<a href="https://youtube.com/@mouldy_shoe/videos" target="_blank" rel="noopener">
+					<a
+						class="stat-inner"
+						href="https://youtube.com/@mouldy_shoe/videos"
+						target="_blank"
+						rel="noopener"
+					>
 						<span class="stat-value" data-stat="videos">—</span>
 						<span class="stat-label">Videos</span>
 					</a>
+				</li>
+				<li class="stat">
+					<div class="stat-inner">
+						<span class="stat-value" data-rank-index={rankIndex}>{RANK_TIERS[0]}</span>
+						<span class="stat-label">Rank</span>
+					</div>
 				</li>
 			</ul>
 			<Footer />
@@ -76,7 +92,7 @@ import logo from '../assets/favicon.png';
 	.stat {
 		background: transparent;
 	}
-	.stat a {
+	.stat-inner {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
@@ -96,52 +112,80 @@ import logo from '../assets/favicon.png';
 		font-size: 1.1rem;
 		color: rgb(var(--black));
 	}
-	.stat a:hover .stat-value {
+	.stat-inner:hover .stat-value {
 		color: var(--accent);
 	}
 </style>
 
-<script>
+<script define:vars={{ rankTiers: RANK_TIERS, rankIndex }}>
 	const fmt = new Intl.NumberFormat('en', {
 		notation: 'compact',
 		maximumFractionDigits: 1,
 	});
 	const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-	function countUp(el: Element, target: number) {
-		const final = fmt.format(target);
-		if (reduceMotion) {
-			el.textContent = final;
-			return;
-		}
-		const duration = 1200;
+	function animateEase(duration, render) {
 		const start = performance.now();
-		const fallback = setTimeout(() => {
-			el.textContent = final;
-		}, duration + 250);
-		let last = el.textContent;
-		function frame(now: number) {
+		let done = false;
+		const finish = () => {
+			if (done) return;
+			done = true;
+			render(1);
+		};
+		const fallback = setTimeout(finish, duration + 250);
+		function frame(now) {
 			const t = Math.min(1, (now - start) / duration);
-			const eased = 1 - Math.pow(1 - t, 3);
-			const next = fmt.format(Math.round(target * eased));
-			if (next !== last) {
-				last = next;
-				el.textContent = next;
-			}
+			render(1 - Math.pow(1 - t, 3));
 			if (t < 1) {
 				requestAnimationFrame(frame);
 			} else {
 				clearTimeout(fallback);
-				if (last !== final) el.textContent = final;
+				finish();
 			}
 		}
 		requestAnimationFrame(frame);
 	}
 
+	function countUp(el, target) {
+		const final = fmt.format(target);
+		if (reduceMotion) {
+			el.textContent = final;
+			return;
+		}
+		let last = el.textContent;
+		animateEase(1200, (eased) => {
+			const next = eased >= 1 ? final : fmt.format(Math.round(target * eased));
+			if (next !== last) {
+				last = next;
+				el.textContent = next;
+			}
+		});
+	}
+
+	function stepRank(el, targetIndex) {
+		const final = rankTiers[targetIndex];
+		if (reduceMotion) {
+			el.textContent = final;
+			return;
+		}
+		let last = el.textContent;
+		animateEase(1200, (eased) => {
+			const idx = eased >= 1 ? targetIndex : Math.round(targetIndex * eased);
+			const next = rankTiers[idx];
+			if (next !== last) {
+				last = next;
+				el.textContent = next;
+			}
+		});
+	}
+
+	const rankEl = document.querySelector('[data-rank-index]');
+	if (rankEl) stepRank(rankEl, rankIndex);
+
 	fetch('/api/stats')
 		.then((r) => r.json())
-		.then((data: Record<string, unknown>) => {
-			document.querySelectorAll<HTMLElement>('[data-stat]').forEach((el) => {
+		.then((data) => {
+			document.querySelectorAll('[data-stat]').forEach((el) => {
 				const value = data[el.dataset.stat ?? ''];
 				if (typeof value === 'number') countUp(el, value);
 			});
