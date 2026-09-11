@@ -2,7 +2,6 @@
 import { SITE_TITLE } from '../consts';
 ---
 
-<div class="header-sentinel" aria-hidden="true"></div>
 <header>
 	<nav>
 		<h2><a href="/">{SITE_TITLE}</a></h2>
@@ -67,24 +66,25 @@ import { SITE_TITLE } from '../consts';
 
 <script>
 	const header = document.querySelector('header');
-	const sentinel = document.querySelector('.header-sentinel');
-	if (header && sentinel) {
-		new IntersectionObserver(
-			([entry]) => header.classList.toggle('scrolled', !entry.isIntersecting),
-			{ threshold: 0 },
-		).observe(sentinel);
+	if (header) {
+		const REVEAL_AFTER = 200;
+		let ticking = false;
+		const sync = () => {
+			const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+			header.classList.toggle('scrolled', scrollY > REVEAL_AFTER);
+			ticking = false;
+		};
+		const onScroll = () => {
+			if (ticking) return;
+			ticking = true;
+			requestAnimationFrame(sync);
+		};
+		sync();
+		window.addEventListener('scroll', onScroll, { passive: true });
 	}
 </script>
 
 <style>
-	.header-sentinel {
-		position: absolute;
-		top: 0;
-		left: 0;
-		width: 1px;
-		height: 200px;
-		pointer-events: none;
-	}
 	header {
 		position: fixed;
 		top: 0;
