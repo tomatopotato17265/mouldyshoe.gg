@@ -66,7 +66,7 @@ if (rankIndex === -1) {
 				></a>
 				<div class="latest-video-text">
 					<h2>Latest video</h2>
-					<p>My latest video. Go check it out!</p>
+					<p data-latest-video-title>My latest video. Go check it out!</p>
 				</div>
 			</div>
 			<Footer />
@@ -255,6 +255,11 @@ if (rankIndex === -1) {
 				img.addEventListener('load', () => img.classList.add('loaded'));
 				img.src = video.thumbnail;
 				link.appendChild(img);
+
+				const titleEl = document.querySelector('[data-latest-video-title]');
+				if (titleEl && typeof video.title === 'string' && video.title) {
+					titleEl.textContent = video.title;
+				}
 			}
 		})
 		.catch(() => {});
